@@ -14,28 +14,32 @@ from tasks.models import Task
 def index(request):
     return HttpResponse("Hello, world. You're at the tasks index.")
 
-@api_view(['GET'])
-def get(request):
-    print("**********")
+@api_view(['GET','POST', 'DELETE'])
+def crud(request):
+    if request.method =='GET':
+        task=Task.objects.all()
+        if task.exists():
+            departments_serializer=TaskSerializer(task,many=True)
+            return JsonResponse(departments_serializer.data,safe=False)
+        return HttpResponse("You have zero tasks", content_type="text/plain") 
 
-    task=Task.objects.all()
-    print("---------------")
-    if task.exists():
-        departments_serializer=TaskSerializer(task,many=True)
-        return JsonResponse(departments_serializer.data,safe=False)
-    return HttpResponse("You have zero tasks", content_type="text/plain") 
+    elif request.method == 'POST':
+        data=JSONParser().parse(request)
+        task_serializer = serializer.TaskSerializer(data=data)
+        if task_serializer.is_valid():
+                task_serializer.save()
+                response = JsonResponse(task_serializer.data, status=status.HTTP_201_CREATED) 
+                print(response)
+                return response
+        return JsonResponse(task_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(['POST'])
-def post(request):
-    data=JSONParser().parse(request)
-    task_serializer = serializer.TaskSerializer(data=data)
-    if task_serializer.is_valid():
-            task_serializer.save()
-            response = JsonResponse(task_serializer.data, status=status.HTTP_201_CREATED) 
-            print(response)
-            return response
-    return JsonResponse(task_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    elif request.method == 'DELETE':
+        count = Task.objects.all().delete()
+        return JsonResponse({'message': '{} Tasks deletadas com sucesso!'.format(count[0])}, status=status.HTTP_204_NO_CONTENT)
 
+
+
+    
 
 
 # Fonte: https://www.bezkoder.com/django-postgresql-crud-rest-framework/
